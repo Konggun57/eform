@@ -375,7 +375,13 @@ document.getElementById("btnStartLoad").addEventListener("click",()=>{
 (async()=>{
   try{
     const r=await fetch("./project.json",{cache:"no-store"});
-    if(r.ok){await loadProject(await r.json());hideOverlay();setMode("fill");toast("พร้อมกรอกเอกสาร");return;}
+    if(r.ok){
+      // แสดง loading state ระหว่างประมวลผล PDF
+      const box=document.getElementById("startBox");
+      box.innerHTML='<h2>⏳ กำลังโหลดเอกสาร...</h2><p style="color:#7a756c;font-size:15px;line-height:1.7">กรุณารอสักครู่<br>ระบบกำลังเตรียม PDF ทั้งหมด</p><div style="margin-top:8px;color:#1f6f54;font-size:13px">🔄 กำลังประมวลผล...</div>';
+      await loadProject(await r.json());
+      hideOverlay();setMode("fill");toast("พร้อมกรอกเอกสาร");return;
+    }
   }catch(e){}
   // fetch ล้มเหลว — overlay จะแสดงให้ผู้ใช้เลือกไฟล์เอง
 })();
