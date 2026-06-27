@@ -379,6 +379,7 @@ document.getElementById("btnStartLoad").addEventListener("click",()=>{
       const box=document.getElementById("startBox");
       box.innerHTML='<h2>⏳ กำลังโหลดเอกสาร...</h2><p style="color:#7a756c;font-size:15px;line-height:1.7">กรุณารอสักครู่<br>ระบบกำลังเตรียม PDF ทั้งหมด</p><div style="margin-top:8px;color:#1f6f54;font-size:13px">🔄 กำลังประมวลผล...</div>';
       const proj=await r.json();
+      // ตั้งค่า docs ทันที (sync — เร็ว) โดยไม่รอ render PDF
       S.docs=[];
       if(proj.docs){proj.docs.forEach(d=>S.docs.push({name:d.name,pdfB64:d.pdfB64,
         fields:(d.fields||[]).map(f=>({id:uid++,value:"",...f})),pageSizes:[],scaleCss:[]}));}
@@ -386,10 +387,11 @@ document.getElementById("btnStartLoad").addEventListener("click",()=>{
         fields:(proj.fields||[]).map(f=>({id:uid++,value:"",...f})),pageSizes:[],scaleCss:[]});}
       renderTabs();
       hideOverlay();setMode("fill");toast("พร้อมกรอกเอกสาร");
-      if(S.docs.length)selectDoc(0);
+      if(S.docs.length)selectDoc(0); // ไม่ await — render PDF ใน background
       return;
     }
   }catch(e){}
+  // fetch ล้มเหลว — overlay จะแสดงให้ผู้ใช้เลือกไฟล์เอง
 })();
 /*BUNDLE_STARTUP_END*/
 </script>
