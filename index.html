@@ -174,7 +174,7 @@ async function renderDoc(){
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p);const vp1=page.getViewport({scale:1});
     d.pageSizes[p-1]={w:vp1.width,h:vp1.height};const scale=W/vp1.width;d.scaleCss[p-1]=scale;
-    const vp=page.getViewport({scale:scale*(window.devicePixelRatio||1)});
+    const vp=page.getViewport({scale:scale*Math.min(window.devicePixelRatio||1,1.5)});
     const wrap=document.createElement("div");wrap.className="page-wrap";wrap.dataset.page=p;
     wrap.style.width=W+"px";wrap.style.height=(vp1.height*scale)+"px";
     const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;
