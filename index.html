@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>กรอกเอกสารสัญญา PDF ออนไลน์</title>
+<style>
+  :root{--bg:#f4f1ea;--panel:#fff;--ink:#2b2b2b;--muted:#7a756c;--line:#e3ddd1;
+    --accent:#1f6f54;--accent2:#c2410c;--field:#2563eb;}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Sarabun","Noto Sans Thai",system-ui,-apple-system,sans-serif;}
+  header{position:sticky;top:0;z-index:50;background:#fffefb;border-bottom:1px solid var(--line);
+    padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  header h1{font-size:16px;margin:0 12px 0 0;font-weight:700}
+  .modepill{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .modepill button{border:0;background:transparent;padding:7px 16px;cursor:pointer;font-size:14px;color:var(--muted)}
+  .modepill button.on{background:var(--accent);color:#fff}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;
+    cursor:pointer;font-size:14px;color:var(--ink);font-family:inherit}
+  .btn:hover{border-color:#cdc6b8}.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.warn{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}.spacer{flex:1}
+  #tabs{max-width:980px;margin:10px auto 0;padding:0 12px;display:flex;gap:8px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer;font-size:14px;color:var(--muted)}
+  .tab.on{background:#2b2b2b;color:#fff;border-color:#2b2b2b}
+  main{max-width:980px;margin:0 auto;padding:14px 12px 90px}
+  #pages{display:flex;flex-direction:column;align-items:center;gap:22px}
+  .page-wrap{position:relative;box-shadow:0 4px 18px rgba(0,0,0,.12);background:#fff;line-height:0}
+  .page-wrap canvas{display:block;width:100%;height:auto}
+  .overlay{position:absolute;inset:0;line-height:normal}
+  .fld{position:absolute;display:flex;align-items:flex-end;overflow:visible}
+  .fld input{width:100%;border:0;background:transparent;outline:none;padding:0 2px;font-family:inherit;color:#111;line-height:1.05}
+  body.design .fld{cursor:move;background:rgba(37,99,235,.12);border:1px dashed var(--field)}
+  body.design .fld input{pointer-events:none}
+  .fld .lbl{position:absolute;top:-15px;left:0;font-size:10px;color:var(--field);white-space:nowrap;background:#fff;padding:0 3px;border-radius:3px;line-height:1.4}
+  .fld .grip{position:absolute;right:-5px;bottom:-5px;width:12px;height:12px;background:var(--field);border:2px solid #fff;border-radius:3px;cursor:ew-resize;display:none}
+  body.design .fld.sel{border-style:solid;background:rgba(37,99,235,.2)}
+  body.design .fld.sel .grip{display:block}
+  body.design .fld .lbl{display:block}
+  body.fill .fld .lbl,body.fill .fld .grip{display:none}
+  body.fill .fld input{border-bottom:1px solid #b8a98a}
+  #placing{cursor:crosshair!important}
+  #props{position:fixed;right:14px;bottom:14px;width:240px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:12px;display:none;z-index:60}
+  #props.show{display:block}
+  #props label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+  #props input,#props select{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:14px}
+  .row{display:flex;gap:8px}.row>*{flex:1}
+  .hint{background:#fffdf6;border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:#5c574e;font-size:14px;line-height:1.6;max-width:680px;margin:0 auto 18px}
+  .hint b{color:var(--ink)}
+  .drop{border:2px dashed #cdc6b8;border-radius:14px;padding:36px 20px;text-align:center;color:var(--muted);max-width:560px;margin:24px auto;background:#fffdf8}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;transition:.25s;z-index:90;pointer-events:none}
+  .toast.show{opacity:1}
+  small.k{color:var(--muted)}
+
+  /* ── Responsive: tablet & mobile ── */
+  @media(max-width:700px){
+    header{padding:8px 10px;gap:6px;}
+    header h1{font-size:13px;margin:0 4px 0 0;}
+    .modepill button{padding:6px 10px;font-size:13px;}
+    .btn{padding:6px 9px;font-size:13px;}
+    /* ซ่อน label ยาวๆ บนจอเล็ก */
+    #btnPdf span.long{display:none;}
+  }
+  @media(max-width:480px){
+    header{gap:4px;}
+    header h1{display:none;}
+    .modepill button{padding:5px 8px;font-size:12px;}
+    .btn{padding:5px 8px;font-size:12px;}
+    #tabs{gap:6px;}
+    .tab{padding:5px 11px;font-size:13px;}
+    main{padding:10px 4px 90px;}
+    /* props panel เต็มความกว้าง ลอยบนล่าง */
+    #props{left:8px;right:8px;width:auto;bottom:8px;border-radius:12px;}
+  }
+  /* ป้องกัน zoom อัตโนมัติตอน focus input บน iOS */
+  @media(max-width:768px){
+    .fld input{font-size:max(16px, 1em) !important;}
+  }
+
+  /* startup overlay */
+  #startOverlay{position:fixed;inset:0;background:rgba(244,241,234,.97);z-index:200;display:flex;align-items:center;justify-content:center;}
+  #startBox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:36px 40px;max-width:460px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.13);}
+  #startBox h2{margin:0 0 10px;font-size:22px}
+  #startBox p{color:var(--muted);font-size:15px;margin:0 0 24px;line-height:1.7}
+  #btnStartLoad{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 28px;font-size:17px;cursor:pointer;font-family:inherit;width:100%;margin-bottom:12px}
+  #btnStartLoad:hover{opacity:.9}
+  #startNote{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body class="design">
+
+<!-- Startup overlay (ซ่อนหลัง project โหลดแล้ว) -->
+<div id="startOverlay">
+  <div id="startBox">
+    <h2>📄 กรอกเอกสารสัญญา PDF</h2>
+    <p>กดปุ่มด้านล่าง แล้วเลือกไฟล์ <code>project.json</code><br>ที่อยู่ในโฟลเดอร์เดียวกันกับไฟล์นี้</p>
+    <button id="btnStartLoad">📂 เลือกไฟล์ project.json</button>
+    <div id="startNote">หรือลาก <code>project.json</code> มาวางบนหน้านี้ก็ได้</div>
+  </div>
+</div>
+
+<header>
+  <h1>📄 ฟอร์มกรอกเอกสาร PDF</h1>
+  <div class="modepill" id="modepill">
+    <button data-mode="design" class="on">ออกแบบฟอร์ม</button>
+    <button data-mode="fill">กรอกเอกสาร</button>
+  </div>
+  <button class="btn" id="btnUpload">⬆ เพิ่ม PDF</button>
+  <button class="btn" id="btnAdd" disabled>➕ เพิ่มช่องกรอก</button>
+  <div class="spacer"></div>
+  <button class="btn" id="btnSave" disabled>💾 บันทึกโปรเจกต์</button>
+  <button class="btn" id="btnLoad">📂 เปิดโปรเจกต์</button>
+  <button class="btn primary" id="btnPdf" disabled>⬇ <span class="long">ดาวน์โหลด PDF ทุกหน้า </span>รวมไฟล์เดียว</button>
+  <input type="file" id="filePdf" accept="application/pdf" hidden>
+  <input type="file" id="fileProj" accept="application/json" hidden>
+</header>
+<div id="tabs"></div>
+
+<main>
+  <div class="hint" id="introHint">
+    <b>โหมดออกแบบฟอร์ม</b> — กด "เพิ่ม PDF" เพื่อโหลดไฟล์ต้นฉบับเปล่า, กด "เพิ่มช่องกรอก" แล้วคลิกบนเส้นประ,
+    ลากปรับตำแหน่ง/ความกว้างได้ เสร็จแล้วกด "บันทึกโปรเจกต์" จะได้ <code>project.json</code> เอาไปวางคู่กับ
+    <code>index.html</code> บนโฮสติ้งฟรี แล้วแชร์ลิงก์ได้เลย<br>
+    <small class="k">ตัวอักษรจะถูกพิมพ์ทับลงบน PDF เดิมโดยตรง ฟอร์มจึงไม่ขยับแม้แต่มิลลิเมตรเดียว</small>
+  </div>
+  <div class="drop" id="drop">📥 ลากไฟล์ PDF มาวางที่นี่ หรือกด "เพิ่ม PDF" ด้านบน</div>
+  <div id="pages"></div>
+</main>
+
+<div id="props">
+  <div style="font-weight:700;font-size:14px;margin-bottom:4px">ตั้งค่าช่องกรอก</div>
+  <label>ป้ายชื่อช่อง</label><input type="text" id="pLabel">
+  <div class="row">
+    <div><label>ขนาดฟอนต์</label><input type="number" id="pSize" min="6" max="48" step="0.5"></div>
+    <div><label>จัดวาง</label><select id="pAlign"><option value="left">ซ้าย</option><option value="center">กลาง</option><option value="right">ขวา</option></select></div>
+  </div>
+  <label>ปรับแนวตั้ง (จุด: +ลง −ขึ้น)</label><input type="number" id="pDy" step="0.5">
+  <button class="btn warn" id="pDel" style="width:100%;margin-top:10px">🗑 ลบช่องนี้</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const S={docs:[],cur:-1,mode:"design",placing:false,sel:null,fontBytes:null};
+let uid=1;
+const $=s=>document.querySelector(s);
+const pagesEl=$("#pages"),drop=$("#drop");
+const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1900)};
+const curDoc=()=>S.docs[S.cur];
+
+function b64FromBuf(buf){let s="";const b=new Uint8Array(buf),C=0x8000;
+  for(let i=0;i<b.length;i+=C)s+=String.fromCharCode.apply(null,b.subarray(i,i+C));return btoa(s);}
+function bufFromB64(b64){const bin=atob(b64),n=bin.length,o=new Uint8Array(n);
+  for(let i=0;i<n;i++)o[i]=bin.charCodeAt(i);return o;}
+
+function renderTabs(){
+  const t=$("#tabs");t.innerHTML="";
+  S.docs.forEach((d,i)=>{const b=document.createElement("div");b.className="tab"+(i===S.cur?" on":"");
+    b.textContent=d.name||("เอกสาร "+(i+1));b.onclick=()=>selectDoc(i);t.appendChild(b);});
+}
+async function selectDoc(i){S.cur=i;deselect();renderTabs();await renderDoc();}
+
+async function renderDoc(){
+  pagesEl.innerHTML="";const d=curDoc();if(!d)return;
+  drop.style.display="none";$("#introHint").style.display=(S.mode==="design")?"":"none";
+  const pdf=await pdfjsLib.getDocument({data:bufFromB64(d.pdfB64)}).promise;
+  d.pageSizes=[];d.scaleCss=[];
+  const W=Math.min(900,(document.querySelector("main").clientWidth-24));
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);const vp1=page.getViewport({scale:1});
+    d.pageSizes[p-1]={w:vp1.width,h:vp1.height};const scale=W/vp1.width;d.scaleCss[p-1]=scale;
+    const vp=page.getViewport({scale:scale*(window.devicePixelRatio||1)});
+    const wrap=document.createElement("div");wrap.className="page-wrap";wrap.dataset.page=p;
+    wrap.style.width=W+"px";wrap.style.height=(vp1.height*scale)+"px";
+    const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;
+    const ov=document.createElement("div");ov.className="overlay";
+    wrap.appendChild(cv);wrap.appendChild(ov);pagesEl.appendChild(wrap);
+    await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    ov.addEventListener("pointerdown",e=>onOverlayDown(e,p,ov));
+  }
+  $("#btnAdd").disabled=false;$("#btnSave").disabled=false;$("#btnPdf").disabled=false;
+  renderFields();
+}
+const overlayOf=p=>pagesEl.querySelector(`.page-wrap[data-page="${p}"] .overlay`);
+const wrapOf=p=>pagesEl.querySelector(`.page-wrap[data-page="${p}"]`);
+
+// ความสูง field = cssFont * FIELD_H_FACTOR
+// top ของ field = yPct*H - cssFont * LIFT_FACTOR → ทำให้ baseline อยู่ที่เส้นจุดไข่ปลา
+const LIFT=1.1; // factor: เลื่อน field ขึ้นเหนือ yPct ให้ baseline ตรงเส้น
+const FH=1.15;  // factor: ความสูงของ field div
+
+function fieldTop(yPct,H,cssFont){return yPct*H - cssFont*LIFT;}
+
+function renderFields(){
+  document.querySelectorAll(".fld").forEach(n=>n.remove());const d=curDoc();if(!d)return;
+  d.fields.forEach(f=>{
+    const ov=overlayOf(f.page);if(!ov)return;const wrap=wrapOf(f.page);
+    const W=wrap.clientWidth,H=wrap.clientHeight;
+    const el=document.createElement("div");el.className="fld";el.dataset.id=f.id;
+    const cssFont=f.fontSize*d.scaleCss[f.page-1];
+    const fieldW=f.wPct*W;
+    el.dataset.cssFont=cssFont; // เก็บไว้ให้ drag ใช้
+    el.style.left=(f.xPct*W)+"px";
+    el.style.top=fieldTop(f.yPct,H,cssFont)+"px";
+    el.style.width=fieldW+"px";
+    el.style.height=(cssFont*FH)+"px";
+    const lbl=document.createElement("div");lbl.className="lbl";lbl.textContent=f.label||"ช่องกรอก";
+    const inp=document.createElement("input");inp.value=f.value||"";inp.placeholder=f.label||"";
+    inp.style.fontSize=cssFont+"px";inp.style.textAlign=f.align;
+    // auto-shrink: ใช้ canvas วัด — ทำงานได้แม้ก่อน DOM insert
+    const _shrink=()=>{
+      if(!inp.value){inp.style.fontSize=cssFont+"px";return;}
+      const maxW=fieldW-4;let sz=cssFont;
+      const cv2=document.createElement("canvas"),ctx2=cv2.getContext("2d");
+      ctx2.font=`${sz}px Sarabun,Noto Sans Thai,sans-serif`;
+      while(sz>5&&ctx2.measureText(inp.value).width>maxW){sz-=0.5;ctx2.font=`${sz}px Sarabun,Noto Sans Thai,sans-serif`;}
+      inp.style.fontSize=sz+"px";
+    };
+    inp.addEventListener("input",()=>{f.value=inp.value;_shrink();});
+    const grip=document.createElement("div");grip.className="grip";
+    grip.addEventListener("pointerdown",e=>startResize(e,f,el));
+    el.appendChild(lbl);el.appendChild(inp);el.appendChild(grip);
+    el.addEventListener("pointerdown",e=>{if(S.mode!=="design")return;if(e.target===grip)return;selectField(f,el);startDrag(e,f,el);});
+    ov.appendChild(el);
+    if(inp.value)_shrink();
+    if(S.sel&&S.sel.id===f.id)el.classList.add("sel");
+  });
+}
+function selectField(f,el){S.sel=f;document.querySelectorAll(".fld").forEach(n=>n.classList.remove("sel"));if(el)el.classList.add("sel");
+  $("#props").classList.add("show");$("#pLabel").value=f.label||"";$("#pSize").value=f.fontSize;$("#pAlign").value=f.align;$("#pDy").value=f.dy||0;}
+function deselect(){S.sel=null;document.querySelectorAll(".fld").forEach(n=>n.classList.remove("sel"));$("#props").classList.remove("show");}
+function reselect(){if(S.sel){const el=document.querySelector(`.fld[data-id="${S.sel.id}"]`);if(el)el.classList.add("sel");}}
+
+function onOverlayDown(e,page,ov){if(S.mode!=="design")return;
+  if(S.placing){const r=ov.getBoundingClientRect();
+    const f={id:uid++,page,xPct:(e.clientX-r.left)/r.width,yPct:(e.clientY-r.top)/r.height,wPct:0.25,fontSize:14,align:"left",dy:0,label:"ช่องกรอก",value:""};
+    curDoc().fields.push(f);S.placing=false;document.body.id="";renderFields();
+    selectField(f,ov.querySelector(`.fld[data-id="${f.id}"]`));toast("เพิ่มช่องแล้ว — ลากปรับตำแหน่งได้");
+  }else if(e.target===ov)deselect();}
+function startDrag(e,f,el){e.preventDefault();const ov=el.parentElement,r=ov.getBoundingClientRect();
+  const sx=e.clientX,sy=e.clientY,ox=f.xPct,oy=f.yPct;
+  const cssFont=parseFloat(el.dataset.cssFont)||0; // ดึงค่าจาก data attribute ที่เก็บไว้
+  function mv(ev){f.xPct=Math.max(0,Math.min(1,ox+(ev.clientX-sx)/r.width));f.yPct=Math.max(0,Math.min(1,oy+(ev.clientY-sy)/r.height));
+    el.style.left=(f.xPct*r.width)+"px";el.style.top=fieldTop(f.yPct,r.height,cssFont)+"px";}
+  function up(){removeEventListener("pointermove",mv);removeEventListener("pointerup",up);}
+  addEventListener("pointermove",mv);addEventListener("pointerup",up);}
+function startResize(e,f,el){e.preventDefault();e.stopPropagation();const ov=el.parentElement,r=ov.getBoundingClientRect();const sx=e.clientX,ow=f.wPct;
+  function mv(ev){f.wPct=Math.max(0.03,Math.min(1,ow+(ev.clientX-sx)/r.width));el.style.width=(f.wPct*r.width)+"px";}
+  function up(){removeEventListener("pointermove",mv);removeEventListener("pointerup",up);}
+  addEventListener("pointermove",mv);addEventListener("pointerup",up);}
+
+$("#pLabel").addEventListener("input",e=>{if(S.sel){S.sel.label=e.target.value;renderFields();reselect();}});
+$("#pSize").addEventListener("input",e=>{if(S.sel){S.sel.fontSize=parseFloat(e.target.value)||12;renderFields();reselect();}});
+$("#pAlign").addEventListener("change",e=>{if(S.sel){S.sel.align=e.target.value;renderFields();reselect();}});
+$("#pDy").addEventListener("input",e=>{if(S.sel)S.sel.dy=parseFloat(e.target.value)||0;});
+$("#pDel").addEventListener("click",()=>{if(S.sel){const d=curDoc();d.fields=d.fields.filter(x=>x.id!==S.sel.id);deselect();renderFields();}});
+
+$("#modepill").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setMode(b.dataset.mode);});
+function setMode(m){S.mode=m;document.body.className=m;
+  document.querySelectorAll("#modepill button").forEach(x=>x.classList.toggle("on",x.dataset.mode===m));
+  if(m!=="design"){deselect();S.placing=false;document.body.id="";}
+  $("#btnAdd").style.display=$("#btnSave").style.display=(m==="design")?"":"none";
+  $("#btnUpload").style.display=(m==="design")?"":"none";
+  $("#introHint").style.display=(m==="design"&&S.cur>=0)?"":(m==="design"?"":"none");}
+
+$("#btnUpload").addEventListener("click",()=>$("#filePdf").click());
+$("#filePdf").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;
+  const buf=await f.arrayBuffer();S.docs.push({name:f.name.replace(/\.pdf$/i,""),pdfB64:b64FromBuf(buf),fields:[],pageSizes:[],scaleCss:[]});
+  renderTabs();await selectDoc(S.docs.length-1);toast("เพิ่ม PDF แล้ว");});
+$("#btnAdd").addEventListener("click",()=>{S.placing=true;document.body.id="placing";toast("คลิกบนหน้าเอกสารตรงที่ต้องการวางช่อง");});
+$("#btnLoad").addEventListener("click",()=>$("#fileProj").click());
+$("#fileProj").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;
+  await loadProject(JSON.parse(await f.text()));
+  hideOverlay();
+  toast("เปิดโปรเจกต์แล้ว");});
+$("#btnSave").addEventListener("click",()=>{
+  const proj={v:2,name:"ชุดสัญญา",docs:S.docs.map(d=>({name:d.name,pdfB64:d.pdfB64,
+    fields:d.fields.map(({id,value,pageSizes,scaleCss,...r})=>r)}))};
+  const blob=new Blob([JSON.stringify(proj)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="project.json";a.click();
+  toast("บันทึก project.json แล้ว");});
+
+async function loadProject(proj){
+  S.docs=[];
+  if(proj.docs){proj.docs.forEach(d=>S.docs.push({name:d.name,pdfB64:d.pdfB64,
+    fields:(d.fields||[]).map(f=>({id:uid++,value:"",...f})),pageSizes:[],scaleCss:[]}));}
+  else if(proj.pdfB64){S.docs.push({name:proj.name||"เอกสาร",pdfB64:proj.pdfB64,
+    fields:(proj.fields||[]).map(f=>({id:uid++,value:"",...f})),pageSizes:[],scaleCss:[]});}
+  renderTabs();if(S.docs.length)await selectDoc(0);}
+
+function hideOverlay(){
+  const o=document.getElementById("startOverlay");
+  if(o)o.style.display="none";
+}
+
+async function getFontBytes(){if(S.fontBytes)return S.fontBytes;
+  const urls=["./Sarabun-Regular.ttf",
+    "https://cdn.jsdelivr.net/gh/google/fonts/ofl/sarabun/Sarabun-Regular.ttf",
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/sarabun/Sarabun-Regular.ttf"];
+  for(const u of urls){try{const r=await fetch(u);if(r.ok){S.fontBytes=await r.arrayBuffer();return S.fontBytes;}}catch(e){}}
+  throw new Error("โหลดฟอนต์ไทยไม่สำเร็จ");}
+
+$("#btnPdf").addEventListener("click",async()=>{
+  if(!S.docs.length){toast("ยังไม่มีเอกสาร");return;}
+  const btn=$("#btnPdf"),oldTxt=btn.textContent;btn.disabled=true;btn.textContent="⏳ กำลังสร้าง...";
+  try{
+    const {PDFDocument,rgb}=PDFLib;
+    // โหลดฟอนต์ครั้งเดียว ใช้ซ้ำทุกเอกสาร
+    const fontBytes=await getFontBytes();
+    // สร้าง PDF รวม
+    const merged=await PDFDocument.create();
+
+    for(let di=0;di<S.docs.length;di++){
+      const d=S.docs[di];
+      btn.textContent=`⏳ กำลังสร้าง... (${di+1}/${S.docs.length})`;
+      // โหลด PDF ต้นฉบับของเอกสารนี้
+      const doc=await PDFDocument.load(bufFromB64(d.pdfB64));
+      doc.registerFontkit(fontkit);
+      let font;
+      try{font=await doc.embedFont(fontBytes,{subset:true});}
+      catch(e){font=await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+        if(di===0)toast("⚠ ใช้ฟอนต์สำรอง ภาษาไทยอาจไม่ขึ้น");}
+      const pages=doc.getPages();
+      // วาดข้อความทุกช่องของเอกสารนี้ (ตำแหน่งไม่เปลี่ยน)
+      for(const f of d.fields){
+        const val=(f.value||"").trim();if(!val)continue;
+        const pg=pages[f.page-1];if(!pg)continue;
+        const {width:W,height:H}=pg.getSize();
+        const boxX=f.xPct*W,boxW=f.wPct*W;
+        // auto-fit: ลดขนาดฟอนต์ถ้าข้อความกว้างเกินช่อง
+        let size=f.fontSize;
+        let tw=0;
+        try{tw=font.widthOfTextAtSize(val,size);}catch(e){}
+        if(tw>0&&tw>boxW-4){
+          size=Math.max(4,size*((boxW-4)/tw));
+          try{tw=font.widthOfTextAtSize(val,size);}catch(e){}
+        }
+        // x-alignment
+        let x=boxX+2;
+        if(f.align==="center")x=boxX+(boxW-tw)/2;
+        else if(f.align==="right")x=boxX+boxW-tw-2;
+        // y: baseline ตรงจุดไข่ปลา (yPct), dy ปรับละเอียด
+        const y=H-(f.yPct*H)-(f.dy||0);
+        try{pg.drawText(val,{x,y,size,font,color:rgb(.05,.05,.05)});}catch(e){}
+      }
+      // คัดลอกทุกหน้าของเอกสารนี้เข้า PDF รวม
+      const indices=doc.getPageIndices();
+      const copied=await merged.copyPages(doc,indices);
+      copied.forEach(p=>merged.addPage(p));
+    }
+
+    const bytes=await merged.save();
+    const blob=new Blob([bytes],{type:"application/pdf"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download="สัญญา-ทั้งหมด.pdf";a.click();
+    toast(`ดาวน์โหลดเรียบร้อย — ${S.docs.length} เอกสาร รวมไฟล์เดียว`);
+  }catch(err){console.error(err);toast("ผิดพลาด: "+err.message);}
+  finally{btn.disabled=false;btn.textContent=oldTxt;}
+});
+
+["dragover","drop"].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault()));
+document.addEventListener("drop",async e=>{const f=e.dataTransfer.files[0];if(!f)return;
+  if(f.type==="application/pdf"){const buf=await f.arrayBuffer();S.docs.push({name:f.name.replace(/\.pdf$/i,""),pdfB64:b64FromBuf(buf),fields:[],pageSizes:[],scaleCss:[]});renderTabs();await selectDoc(S.docs.length-1);hideOverlay();toast("เพิ่ม PDF แล้ว");}
+  else if(f.name.endsWith(".json")){await loadProject(JSON.parse(await f.text()));hideOverlay();setMode("fill");toast("เปิดโปรเจกต์แล้ว");}});
+
+/*BUNDLE_STARTUP_BEGIN*/
+document.getElementById("btnStartLoad").addEventListener("click",()=>{
+  document.getElementById("fileProj").click();
+});
+(async()=>{
+  try{
+    const r=await fetch("./project.json",{cache:"no-store"});
+    if(r.ok){await loadProject(await r.json());hideOverlay();setMode("fill");toast("พร้อมกรอกเอกสาร");return;}
+  }catch(e){}
+  // fetch ล้มเหลว — overlay จะแสดงให้ผู้ใช้เลือกไฟล์เอง
+})();
+/*BUNDLE_STARTUP_END*/
+</script>
+</body>
+</html>
