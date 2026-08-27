@@ -497,15 +497,24 @@ function isInAppBrowser(){
   const ua=navigator.userAgent||"";
   return /Line\//i.test(ua)||/FBAN|FBAV/i.test(ua)||/Instagram/i.test(ua);
 }
+// ใช้ Web Share API เฉพาะบนมือถือ/แท็บเล็ตเท่านั้น เพราะบนคอมพิวเตอร์ (Windows/Mac) เบราว์เซอร์บางตัว
+// รองรับ Web Share ด้วยเหมือนกัน แต่จะเปิดหน้าต่าง "แชร์" ของระบบปฏิบัติการแทนการดาวน์โหลดตรงๆ
+// ซึ่งทำให้ดูเหมือนไฟล์ไม่ถูกบันทึกลงเครื่อง — บนคอมจึงให้ใช้การดาวน์โหลดปกติเสมอ
+function isMobileDevice(){
+  return /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent||"")||
+    (navigator.maxTouchPoints>1&&/Mac/i.test(navigator.platform||""));
+}
 if(isInAppBrowser()){const w=document.getElementById("inAppWarn");if(w)w.style.display="block";}
 async function savePdfBlob(blob,filename){
-  try{
-    const file=new File([blob],filename,{type:"application/pdf"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){
-      await navigator.share({files:[file],title:filename});
-      return;
-    }
-  }catch(e){/* ผู้ใช้กดยกเลิก หรือแชร์ไม่สำเร็จ — ไปลองวิธีถัดไป */}
+  if(isMobileDevice()){
+    try{
+      const file=new File([blob],filename,{type:"application/pdf"});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:filename});
+        return;
+      }
+    }catch(e){/* ผู้ใช้กดยกเลิก หรือแชร์ไม่สำเร็จ — ไปลองวิธีถัดไป */}
+  }
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
   a.href=url;a.download=filename;a.target="_blank";a.rel="noopener";
