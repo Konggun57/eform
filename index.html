@@ -49,6 +49,9 @@
   .row{display:flex;gap:8px}.row>*{flex:1}
   .hint{background:#fffdf6;border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:#5c574e;font-size:14px;line-height:1.6;max-width:680px;margin:0 auto 18px}
   .hint b{color:var(--ink)}
+  #inAppWarn{background:#fff4e6;border:1px solid #f0c78a;color:#7a4a12;font-size:13px;line-height:1.6;
+    padding:10px 14px;text-align:center}
+  #inAppWarn a{color:#7a4a12;font-weight:700}
 
   /* ── Master data panel ── */
   #masterOverlay{position:fixed;inset:0;background:rgba(43,43,43,.42);z-index:150;display:none;align-items:center;justify-content:center;padding:16px}
@@ -124,6 +127,10 @@
   </div>
 </div>
 
+<div id="inAppWarn" style="display:none">
+  ⚠ กำลังเปิดผ่านเบราว์เซอร์ในแอป — การบันทึกไฟล์ PDF ลงเครื่องอาจไม่ทำงาน<br>
+  แนะนำให้กดจุดสามจุด/ไอคอนเบราว์เซอร์มุมขวาบน แล้วเลือก <b>"เปิดในเบราว์เซอร์ภายนอก"</b> ก่อนใช้งาน
+</div>
 <header>
   <h1>📄 ฟอร์มกรอกเอกสาร PDF</h1>
   <div class="modepill" id="modepill">
@@ -470,12 +477,38 @@ $("#btnPdf").addEventListener("click",async()=>{
 
     const bytes=await merged.save();
     const blob=new Blob([bytes],{type:"application/pdf"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-    a.download="สัญญา-ทั้งหมด.pdf";a.click();
-    toast(`ดาวน์โหลดเรียบร้อย — ${S.docs.length} เอกสาร รวมไฟล์เดียว`);
+    await savePdfBlob(blob,"สัญญา-ทั้งหมด.pdf");
+    toast(`สร้างไฟล์เรียบร้อย — ${S.docs.length} เอกสาร รวมไฟล์เดียว`);
   }catch(err){console.error(err);toast("ผิดพลาด: "+err.message);}
   finally{btn.disabled=false;btn.textContent=oldTxt;}
 });
+
+// ── บันทึก/แชร์ไฟล์ PDF ──
+// เบราว์เซอร์ในแอป (LINE, Facebook, Instagram ฯลฯ) มักบล็อกการดาวน์โหลดไฟล์แบบตรงๆ
+// จึงลอง Web Share API ก่อน (เปิดเมนูแชร์ของเครื่อง ซึ่งมี "บันทึกลงเครื่อง/ไฟล์" ให้เลือก)
+// ถ้าใช้ไม่ได้ ค่อย fallback เป็นการดาวน์โหลดแบบเดิม พร้อมคำแนะนำให้เปิดในเบราว์เซอร์ภายนอก
+function isInAppBrowser(){
+  const ua=navigator.userAgent||"";
+  return /Line\//i.test(ua)||/FBAN|FBAV/i.test(ua)||/Instagram/i.test(ua);
+}
+if(isInAppBrowser()){const w=document.getElementById("inAppWarn");if(w)w.style.display="block";}
+async function savePdfBlob(blob,filename){
+  try{
+    const file=new File([blob],filename,{type:"application/pdf"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:filename});
+      return;
+    }
+  }catch(e){/* ผู้ใช้กดยกเลิก หรือแชร์ไม่สำเร็จ — ไปลองวิธีถัดไป */}
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=filename;a.target="_blank";a.rel="noopener";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  if(isInAppBrowser()){
+    toast("ถ้าไฟล์ไม่ถูกบันทึก: กดจุดสามจุด/ไอคอนเบราว์เซอร์มุมขวาบน แล้วเลือก \"เปิดในเบราว์เซอร์ภายนอก\" ก่อนกดดาวน์โหลดอีกครั้ง");
+  }
+}
 
 ["dragover","drop"].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault()));
 document.addEventListener("drop",async e=>{const f=e.dataTransfer.files[0];if(!f)return;
