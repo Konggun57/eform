@@ -639,14 +639,20 @@ $("#fileId").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
   const st=$("#ocrStatus"),raw=$("#ocrRaw");
   st.textContent="⏳ กำลังอ่านบัตร... (อาจใช้เวลา 10-30 วินาที)";raw.style.display="none";
+  let worker;
   try{
-    const{data}=await Tesseract.recognize(f,"tha+eng",{});
+    // Tesseract.js v5 เปลี่ยนวิธีเรียกใช้ — ต้องสร้าง worker ก่อน แล้วค่อย recognize (เวอร์ชันเก่าใช้ Tesseract.recognize() ตรงๆ ได้ แต่ v5 เอาออกแล้ว)
+    worker=await Tesseract.createWorker(["tha","eng"]);
+    const{data}=await worker.recognize(f);
     const text=data.text||"";
     raw.textContent=text;raw.style.display="block";
     applyOcrText(text);
     st.textContent="✅ อ่านเสร็จแล้ว — กรุณาตรวจสอบข้อมูลด้านล่างก่อนกด \"กระจายข้อมูล\"";
   }catch(err){console.error(err);st.textContent="⚠ อ่านบัตรไม่สำเร็จ: "+err.message;}
-  finally{e.target.value="";}
+  finally{
+    if(worker){try{await worker.terminate();}catch(e2){}}
+    e.target.value="";
+  }
 });
 
 function applyOcrText(text){
