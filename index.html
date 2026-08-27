@@ -235,6 +235,7 @@ const $=s=>document.querySelector(s);
 const DATA_KEYS=[
   ["","(ไม่ผูก)"],
   ["fullname","ชื่อ-นามสกุล (ไม่รวมคำนำหน้า)"],
+  ["fullname_titled","คำนำหน้า+ชื่อ-นามสกุล (เต็ม)"],
   ["age","อายุ"],
   ["contract_day","วันที่ทำสัญญา (วัน)"],
   ["contract_month","วันที่ทำสัญญา (เดือน)"],
@@ -532,6 +533,7 @@ function bahtText(numStr){
 function buildMasterMap(){
   const m=S.master,map={};
   map.fullname=[m.first,m.last].filter(Boolean).join(" ");
+  map.fullname_titled=[m.title,m.first,m.last].filter(Boolean).join(" ");
   map.age=m.age||"";
   map.house_no=m.house||"";map.moo=m.moo||"";map.soi=m.soi||"";map.road=m.road||"";
   map.subdistrict=m.sub||"";map.district=m.dist||"";map.province=m.prov||"";map.zipcode=m.zip||"";
