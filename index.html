@@ -214,7 +214,7 @@
       </div>
       <label>ประกอบอาชีพ (ถ้ามี)</label><input id="mOcc">
       <div class="row">
-        <div><label>จำนวนเงิน (บาท)</label><input id="mAmount" type="number" min="0" step="1"></div>
+        <div><label>จำนวนเงิน (บาท)</label><input id="mAmount" type="text" inputmode="numeric" placeholder="0"></div>
         <div><label>วันที่คืนเงิน</label><input id="mRepay" type="date"></div>
       </div>
       <div id="mAmountText"></div>
@@ -612,16 +612,34 @@ const M_EL={title:"mTitle",first:"mFirst",last:"mLast",age:"mAge",date:"mDate",h
   occ:"mOcc",amount:"mAmount",repay:"mRepay"};
 
 function syncMasterInputsFromState(){
-  MASTER_FIELD_IDS.forEach(k=>{const el=$("#"+M_EL[k]);if(el)el.value=S.master[k]||"";});
+  MASTER_FIELD_IDS.forEach(k=>{if(k==="amount")return;const el=$("#"+M_EL[k]);if(el)el.value=S.master[k]||"";});
+  $("#mAmount").value=formatThousands(S.master.amount||"");
   updateAmountPreview();
 }
 function updateAmountPreview(){
   $("#mAmountText").textContent=S.master.amount?("ตัวอักษร: "+bahtText(S.master.amount)):"";
 }
+// ใส่ , คั่นหลักพันอัตโนมัติ เช่น 1000 -> 1,000 / 1000000 -> 1,000,000
+function formatThousands(digitsStr){
+  if(!digitsStr)return"";
+  return digitsStr.replace(/\B(?=(\d{3})+(?!\d))/g,",");
+}
 MASTER_FIELD_IDS.forEach(k=>{
+  if(k==="amount")return; // จัดการแยกต่างหากด้านล่าง เพื่อใส่ , คั่นหลักพัน
   const el=$("#"+M_EL[k]);if(!el)return;
-  el.addEventListener("input",()=>{S.master[k]=el.value;if(k==="amount")updateAmountPreview();});
-  el.addEventListener("change",()=>{S.master[k]=el.value;if(k==="amount")updateAmountPreview();});
+  el.addEventListener("input",()=>{S.master[k]=el.value;});
+  el.addEventListener("change",()=>{S.master[k]=el.value;});
+});
+$("#mAmount").addEventListener("input",()=>{
+  const el=$("#mAmount");
+  const cursorFromEnd=el.value.length-el.selectionStart;
+  const digitsOnly=el.value.replace(/[^\d]/g,"");
+  const formatted=formatThousands(digitsOnly);
+  el.value=formatted;
+  S.master.amount=digitsOnly; // เก็บค่าตัวเลขล้วน (ไม่มี ,) ไว้ใช้คำนวณ/แปลงเป็นตัวอักษร
+  const newPos=Math.max(0,formatted.length-cursorFromEnd);
+  el.setSelectionRange(newPos,newPos);
+  updateAmountPreview();
 });
 
 $("#btnMaster").addEventListener("click",()=>{$("#masterOverlay").classList.add("show");});
