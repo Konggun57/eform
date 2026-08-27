@@ -426,6 +426,12 @@ async function getFontBytes(){if(S.fontBytes)return S.fontBytes;
   for(const u of urls){try{const r=await fetch(u);if(r.ok){S.fontBytes=await r.arrayBuffer();return S.fontBytes;}}catch(e){}}
   throw new Error("โหลดฟอนต์ไทยไม่สำเร็จ");}
 
+function buildPdfFilename(){
+  const name=[S.master.first,S.master.last].filter(Boolean).join(" ").trim();
+  const safe=name.replace(/[\\/:*?"<>|]/g,"").trim();
+  return (safe?safe:"สัญญา-ทั้งหมด")+".pdf";
+}
+
 $("#btnPdf").addEventListener("click",async()=>{
   if(!S.docs.length){toast("ยังไม่มีเอกสาร");return;}
   const btn=$("#btnPdf"),oldTxt=btn.textContent;btn.disabled=true;btn.textContent="⏳ กำลังสร้าง...";
@@ -477,7 +483,7 @@ $("#btnPdf").addEventListener("click",async()=>{
 
     const bytes=await merged.save();
     const blob=new Blob([bytes],{type:"application/pdf"});
-    await savePdfBlob(blob,"สัญญา-ทั้งหมด.pdf");
+    await savePdfBlob(blob,buildPdfFilename());
     toast(`สร้างไฟล์เรียบร้อย — ${S.docs.length} เอกสาร รวมไฟล์เดียว`);
   }catch(err){console.error(err);toast("ผิดพลาด: "+err.message);}
   finally{btn.disabled=false;btn.textContent=oldTxt;}
@@ -645,12 +651,15 @@ $("#fileId").addEventListener("change",async e=>{
 
 function applyOcrText(text){
   const norm=text.replace(/\r/g,"");
-  // ── ชื่อ-นามสกุล (บรรทัดภาษาไทยที่ขึ้นต้นด้วย "ชื่อ") ──
-  let mName=norm.match(/ชื่อ(?:ตัวและชื่อสกุล|ตัว|สกุล)?\s*[:：]?\s*(นาย|นาง|นางสาว)?\s*([ก-๙]+)\s+([ก-๙]+)/);
+  // ── ชื่อ-นามสกุล ──
+  // อ่านจากรูปแบบ "คำนำหน้า ชื่อ นามสกุล" โดยตรง (ไม่พึ่งป้ายกำกับ "ชื่อตัวและชื่อสกุล"
+  // เพราะตัวอักษรป้ายกำกับบนบัตรมีขนาดเล็กมาก OCR อาจอ่านไม่ติด — คำนำหน้าเป็นจุดยึดที่ชัดเจนกว่า
+  // และช่วยไม่ให้ไปจับชื่อเจ้าพนักงานผู้ออกบัตรที่พิมพ์อยู่ด้านล่างบัตรโดยไม่มีคำนำหน้า)
+  let mName=norm.match(/(นาย|นาง|นางสาว)\s+([ก-๙]+)\s+([ก-๙]+)/);
   if(mName){
-    if(mName[1])S.master.title=mName[1];
-    S.master.first=mName[2]||S.master.first;
-    S.master.last=mName[3]||S.master.last;
+    S.master.title=mName[1];
+    S.master.first=mName[2];
+    S.master.last=mName[3];
   }
   // ── วันเกิด -> คำนวณอายุโดยประมาณ ──
   let mBirth=norm.match(/เกิด.*?(\d{1,2})\s*([ก-๙\.]{2,})\s*(\d{4})/);
@@ -665,17 +674,18 @@ function applyOcrText(text){
   }
   // ── เลขบัตรประชาชน (ใช้ตรวจสอบว่าน่าจะเป็นบัตรจริง แต่ไม่ต้องกรอกลงฟอร์ม) ──
   // (ไม่บันทึกเลขบัตรลงข้อมูลหลัก เพื่อความเป็นส่วนตัว — ใช้ชื่อ/ที่อยู่/อายุเท่านั้น)
-  // ── ที่อยู่ (ฝั่งหลังบัตร) ──
-  let mAddr=norm.match(/ที่อยู่\s*[:：]?\s*([^\n]+)/);
+  // ── ที่อยู่ ── (จับข้ามบรรทัดไปจนถึงจุดที่แน่ใจว่าหมดที่อยู่แล้ว เพราะที่อยู่บนบัตรมักตัดขึ้นบรรทัดใหม่
+  // ก่อนถึงจังหวัด — ถ้าจับแค่บรรทัดเดียวจะตกจังหวัดไป)
+  let mAddr=norm.match(/ที่อยู่\s*[:：]?\s*([\s\S]*?)(?=วันออกบัตร|Date of Issue|รหัสสำรวจ|เจ้าพนักงาน|$)/);
   if(mAddr){
-    const line=mAddr[1];
-    const houseM=line.match(/(?:เลขที่|บ้านเลขที่)\s*([0-9\/]+)/);
+    const line=mAddr[1].replace(/\n+/g," ").trim();
+    const houseM=line.match(/(?:เลขที่|บ้านเลขที่)\s*([0-9\/]+)/)||line.match(/^([0-9]+(?:\/[0-9]+)?)/);
     const mooM=line.match(/หมู่(?:ที่)?\s*([0-9]+)/);
     const soiM=line.match(/ซอย\s*([ก-๙0-9a-zA-Z\.]+)/);
     const roadM=line.match(/ถนน\s*([ก-๙0-9a-zA-Z\.]+)/);
-    const subM=line.match(/(?:ตำบล|แขวง)\s*([ก-๙]+)/);
-    const distM=line.match(/(?:อำเภอ|เขต)\s*([ก-๙]+)/);
-    const provM=line.match(/จังหวัด\s*([ก-๙]+)/);
+    const subM=line.match(/(?:ตำบล|ต\.|แขวง)\s*([ก-๙]+)/);
+    const distM=line.match(/(?:อำเภอ|อ\.|เขต)\s*([ก-๙]+)/);
+    const provM=line.match(/(?:จังหวัด|จ\.)\s*([ก-๙]+)/);
     const zipM=line.match(/(\d{5})/);
     if(houseM)S.master.house=houseM[1];
     if(mooM)S.master.moo=mooM[1];
