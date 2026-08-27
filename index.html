@@ -49,6 +49,29 @@
   .row{display:flex;gap:8px}.row>*{flex:1}
   .hint{background:#fffdf6;border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:#5c574e;font-size:14px;line-height:1.6;max-width:680px;margin:0 auto 18px}
   .hint b{color:var(--ink)}
+
+  /* ── Master data panel ── */
+  #masterOverlay{position:fixed;inset:0;background:rgba(43,43,43,.42);z-index:150;display:none;align-items:center;justify-content:center;padding:16px}
+  #masterOverlay.show{display:flex}
+  #masterBox{background:var(--panel);border-radius:16px;max-width:520px;width:100%;max-height:88vh;
+    display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .mHead{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .mHead b{font-size:16px}
+  .mScroll{padding:14px 18px;overflow-y:auto}
+  .mScroll label{display:block;font-size:12px;color:var(--muted);margin:10px 0 3px}
+  .mScroll input,.mScroll select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:14px}
+  .mFoot{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+  .mFoot .btn{flex:1}
+  .mSection{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fbf8f1;border:1px solid var(--line);
+    border-radius:10px;padding:10px}
+  .ocrStatus{font-size:13px;color:var(--muted)}
+  #ocrRaw{display:none;margin-top:8px;font-size:12px;color:var(--muted);white-space:pre-wrap;
+    background:#fbf8f1;border:1px solid var(--line);border-radius:8px;padding:8px;max-height:120px;overflow-y:auto}
+  #mAmountText{font-size:13px;color:var(--accent);min-height:16px;margin-top:4px}
+  @media(max-width:480px){
+    #masterOverlay{padding:0}
+    #masterBox{max-width:none;width:100%;height:100%;max-height:100%;border-radius:0}
+  }
   .drop{border:2px dashed #cdc6b8;border-radius:14px;padding:36px 20px;text-align:center;color:var(--muted);max-width:560px;margin:24px auto;background:#fffdf8}
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;transition:.25s;z-index:90;pointer-events:none}
   .toast.show{opacity:1}
@@ -109,6 +132,7 @@
   </div>
   <button class="btn" id="btnUpload">⬆ เพิ่ม PDF</button>
   <button class="btn" id="btnAdd" disabled>➕ เพิ่มช่องกรอก</button>
+  <button class="btn primary" id="btnMaster" style="display:none">🧾 ข้อมูลหลัก</button>
   <div class="spacer"></div>
   <button class="btn" id="btnSave" disabled>💾 บันทึกโปรเจกต์</button>
   <button class="btn" id="btnLoad">📂 เปิดโปรเจกต์</button>
@@ -137,18 +161,104 @@
     <div><label>จัดวาง</label><select id="pAlign"><option value="left">ซ้าย</option><option value="center">กลาง</option><option value="right">ขวา</option></select></div>
   </div>
   <label>ปรับแนวตั้ง (จุด: +ลง −ขึ้น)</label><input type="number" id="pDy" step="0.5">
+  <label>ผูกกับข้อมูลหลัก (เติมอัตโนมัติ)</label><select id="pKey"></select>
   <button class="btn warn" id="pDel" style="width:100%;margin-top:10px">🗑 ลบช่องนี้</button>
 </div>
 <div class="toast" id="toast"></div>
 
+<div id="masterOverlay">
+  <div id="masterBox">
+    <div class="mHead">
+      <b>🧾 ข้อมูลหลักลูกค้า</b>
+      <button class="btn" id="mClose">✕ ปิด</button>
+    </div>
+    <div class="mScroll">
+      <div class="mSection">
+        <button class="btn" id="btnScanId" type="button">📷 ถ่าย/อัปโหลดบัตรประชาชน</button>
+        <input type="file" id="fileId" accept="image/*" capture="environment" hidden>
+        <span class="ocrStatus" id="ocrStatus"></span>
+      </div>
+      <pre id="ocrRaw"></pre>
+      <label>คำนำหน้า</label>
+      <select id="mTitle"><option>นาย</option><option>นาง</option><option>นางสาว</option></select>
+      <div class="row">
+        <div><label>ชื่อ</label><input id="mFirst" placeholder="ชื่อ"></div>
+        <div><label>นามสกุล</label><input id="mLast" placeholder="นามสกุล"></div>
+      </div>
+      <div class="row">
+        <div><label>อายุ (ปี)</label><input id="mAge" type="number" min="0" max="120"></div>
+        <div><label>วันที่ทำสัญญา</label><input id="mDate" type="date"></div>
+      </div>
+      <div class="row">
+        <div><label>บ้านเลขที่</label><input id="mHouse"></div>
+        <div><label>หมู่ที่</label><input id="mMoo"></div>
+      </div>
+      <div class="row">
+        <div><label>ซอย</label><input id="mSoi"></div>
+        <div><label>ถนน</label><input id="mRoad"></div>
+      </div>
+      <div class="row">
+        <div><label>ตำบล</label><input id="mSub"></div>
+        <div><label>อำเภอ</label><input id="mDist"></div>
+      </div>
+      <div class="row">
+        <div><label>จังหวัด</label><input id="mProv"></div>
+        <div><label>รหัสไปรษณีย์</label><input id="mZip"></div>
+      </div>
+      <label>ประกอบอาชีพ (ถ้ามี)</label><input id="mOcc">
+      <div class="row">
+        <div><label>จำนวนเงิน (บาท)</label><input id="mAmount" type="number" min="0" step="1"></div>
+        <div><label>วันที่คืนเงิน</label><input id="mRepay" type="date"></div>
+      </div>
+      <div id="mAmountText"></div>
+    </div>
+    <div class="mFoot">
+      <button class="btn warn" id="mClear" type="button">🧹 ล้างทั้งหมด</button>
+      <button class="btn primary" id="mApply" type="button">📤 กระจายข้อมูลไปทุกช่อง</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-const S={docs:[],cur:-1,mode:"design",placing:false,sel:null,fontBytes:null};
+const S={docs:[],cur:-1,mode:"design",placing:false,sel:null,fontBytes:null,
+  master:{title:"นาย",first:"",last:"",age:"",date:"",house:"",moo:"",soi:"",road:"",
+    sub:"",dist:"",prov:"",zip:"",occ:"",amount:"",repay:""}};
 let uid=1;
 const $=s=>document.querySelector(s);
+
+// ── รายการ "ข้อมูลหลัก" มาตรฐาน ที่ผูกกับช่องกรอกในแบบฟอร์มได้ ──
+const DATA_KEYS=[
+  ["","(ไม่ผูก)"],
+  ["fullname","ชื่อ-นามสกุล (ไม่รวมคำนำหน้า)"],
+  ["age","อายุ"],
+  ["contract_day","วันที่ทำสัญญา (วัน)"],
+  ["contract_month","วันที่ทำสัญญา (เดือน)"],
+  ["contract_year","วันที่ทำสัญญา (พ.ศ.)"],
+  ["house_no","ที่อยู่ - บ้านเลขที่"],
+  ["moo","ที่อยู่ - หมู่ที่"],
+  ["soi","ที่อยู่ - ซอย"],
+  ["road","ที่อยู่ - ถนน"],
+  ["subdistrict","ที่อยู่ - ตำบล"],
+  ["district","ที่อยู่ - อำเภอ"],
+  ["province","ที่อยู่ - จังหวัด"],
+  ["zipcode","ที่อยู่ - รหัสไปรษณีย์"],
+  ["address_line","ที่อยู่ - รวมบรรทัดเดียว"],
+  ["occupation","อาชีพ"],
+  ["amount","จำนวนเงิน (ตัวเลข)"],
+  ["amount_satang","จำนวนเงิน - สตางค์"],
+  ["amount_text","จำนวนเงิน (ตัวอักษรไทย)"],
+  ["repay_day","วันที่คืนเงิน (วัน)"],
+  ["repay_month","วันที่คืนเงิน (เดือน)"],
+  ["repay_year","วันที่คืนเงิน (พ.ศ.)"],
+  ["title_mr","ติ๊ก ✓ คำนำหน้า: นาย"],
+  ["title_mrs","ติ๊ก ✓ คำนำหน้า: นาง"],
+  ["title_miss","ติ๊ก ✓ คำนำหน้า: นางสาว"],
+];
 const pagesEl=$("#pages"),drop=$("#drop");
 const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1900)};
 const curDoc=()=>S.docs[S.cur];
@@ -232,7 +342,7 @@ function renderFields(){
   });
 }
 function selectField(f,el){S.sel=f;document.querySelectorAll(".fld").forEach(n=>n.classList.remove("sel"));if(el)el.classList.add("sel");
-  $("#props").classList.add("show");$("#pLabel").value=f.label||"";$("#pSize").value=f.fontSize;$("#pAlign").value=f.align;$("#pDy").value=f.dy||0;}
+  $("#props").classList.add("show");$("#pLabel").value=f.label||"";$("#pSize").value=f.fontSize;$("#pAlign").value=f.align;$("#pDy").value=f.dy||0;$("#pKey").value=f.dataKey||"";}
 function deselect(){S.sel=null;document.querySelectorAll(".fld").forEach(n=>n.classList.remove("sel"));$("#props").classList.remove("show");}
 function reselect(){if(S.sel){const el=document.querySelector(`.fld[data-id="${S.sel.id}"]`);if(el)el.classList.add("sel");}}
 
@@ -258,6 +368,8 @@ $("#pLabel").addEventListener("input",e=>{if(S.sel){S.sel.label=e.target.value;r
 $("#pSize").addEventListener("input",e=>{if(S.sel){S.sel.fontSize=parseFloat(e.target.value)||12;renderFields();reselect();}});
 $("#pAlign").addEventListener("change",e=>{if(S.sel){S.sel.align=e.target.value;renderFields();reselect();}});
 $("#pDy").addEventListener("input",e=>{if(S.sel)S.sel.dy=parseFloat(e.target.value)||0;});
+$("#pKey").innerHTML=DATA_KEYS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+$("#pKey").addEventListener("change",e=>{if(S.sel)S.sel.dataKey=e.target.value;});
 $("#pDel").addEventListener("click",()=>{if(S.sel){const d=curDoc();d.fields=d.fields.filter(x=>x.id!==S.sel.id);deselect();renderFields();}});
 
 $("#modepill").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setMode(b.dataset.mode);});
@@ -266,6 +378,7 @@ function setMode(m){S.mode=m;document.body.className=m;
   if(m!=="design"){deselect();S.placing=false;document.body.id="";}
   $("#btnAdd").style.display=$("#btnSave").style.display=(m==="design")?"":"none";
   $("#btnUpload").style.display=(m==="design")?"":"none";
+  $("#btnMaster").style.display=(m==="fill")?"":"none";
   $("#introHint").style.display=(m==="design"&&S.cur>=0)?"":(m==="design"?"":"none");}
 
 $("#btnUpload").addEventListener("click",()=>$("#filePdf").click());
@@ -367,6 +480,179 @@ $("#btnPdf").addEventListener("click",async()=>{
 document.addEventListener("drop",async e=>{const f=e.dataTransfer.files[0];if(!f)return;
   if(f.type==="application/pdf"){const buf=await f.arrayBuffer();S.docs.push({name:f.name.replace(/\.pdf$/i,""),pdfB64:b64FromBuf(buf),fields:[],pageSizes:[],scaleCss:[]});renderTabs();await selectDoc(S.docs.length-1);hideOverlay();toast("เพิ่ม PDF แล้ว");}
   else if(f.name.endsWith(".json")){await loadProject(JSON.parse(await f.text()));hideOverlay();setMode("fill");toast("เปิดโปรเจกต์แล้ว");}});
+
+// ══════════════════════════════════════════════════════════════
+// ข้อมูลหลัก (Master Data) — กรอกครั้งเดียว กระจายไปทุกช่องที่ผูกไว้
+// ══════════════════════════════════════════════════════════════
+
+const THAI_MONTHS=["","มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+  "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+
+function splitThaiDate(isoDate){ // "YYYY-MM-DD" (ค.ศ.) -> {day, monthName, yearBE}
+  if(!isoDate)return{day:"",monthName:"",yearBE:""};
+  const[y,m,d]=isoDate.split("-").map(Number);
+  return{day:String(d),monthName:THAI_MONTHS[m]||"",yearBE:String(y+543)};
+}
+
+// แปลงตัวเลขจำนวนเงินเป็นคำอ่านภาษาไทย (บาทถ้วน)
+function bahtText(numStr){
+  const n=parseFloat(numStr);
+  if(isNaN(n)||n<0)return"";
+  const digitTh=["ศูนย์","หนึ่ง","สอง","สาม","สี่","ห้า","หก","เจ็ด","แปด","เก้า"];
+  const posTh=["","สิบ","ร้อย","พัน","หมื่น","แสน"]; // ตำแหน่งภายในกลุ่ม 6 หลัก (หน่วย→แสน)
+
+  function sayGroup(g){ // g = 1-6 หลัก ไม่มีเลขศูนย์นำหน้า
+    g=g.replace(/^0+/,"");if(g==="")return"";
+    let out="";const len=g.length;
+    for(let i=0;i<len;i++){
+      const d=parseInt(g[i],10);if(d===0)continue;
+      const pos=len-1-i;
+      if(pos===0)out+=(d===1&&len>1)?"เอ็ด":digitTh[d];
+      else if(pos===1)out+=(d===1)?"สิบ":(d===2)?"ยี่สิบ":digitTh[d]+"สิบ";
+      else out+=digitTh[d]+posTh[pos];
+    }
+    return out;
+  }
+  function sayInt(intStr){
+    intStr=intStr.replace(/^0+(?=\d)/,"");
+    if(intStr==="0")return"ศูนย์";
+    const groups=[];let s=intStr;
+    while(s.length>0){groups.unshift(s.slice(-6));s=s.slice(0,-6);}
+    let out="";
+    groups.forEach((g,gi)=>{const txt=sayGroup(g);if(txt)out+=txt+(gi<groups.length-1?"ล้าน":"");});
+    return out;
+  }
+  const intPart=Math.floor(n);
+  const satang=Math.round((n-intPart)*100);
+  let words=sayInt(String(intPart))+"บาท";
+  words+= satang>0 ? sayInt(String(satang))+"สตางค์" : "ถ้วน";
+  return words;
+}
+
+function buildMasterMap(){
+  const m=S.master,map={};
+  map.fullname=[m.first,m.last].filter(Boolean).join(" ");
+  map.age=m.age||"";
+  map.house_no=m.house||"";map.moo=m.moo||"";map.soi=m.soi||"";map.road=m.road||"";
+  map.subdistrict=m.sub||"";map.district=m.dist||"";map.province=m.prov||"";map.zipcode=m.zip||"";
+  map.occupation=m.occ||"";
+  map.address_line=[
+    m.house?("เลขที่ "+m.house):"", m.moo?("หมู่ "+m.moo):"", m.soi?("ซอย"+m.soi):"",
+    m.road?("ถนน"+m.road):""
+  ].filter(Boolean).join(" ");
+  const cd=splitThaiDate(m.date);
+  map.contract_day=cd.day;map.contract_month=cd.monthName;map.contract_year=cd.yearBE;
+  const rd=splitThaiDate(m.repay);
+  map.repay_day=rd.day;map.repay_month=rd.monthName;map.repay_year=rd.yearBE;
+  const amt=m.amount?String(m.amount):"";
+  map.amount=amt;map.amount_satang="";
+  map.amount_text=amt?bahtText(amt):"";
+  map.title_mr=m.title==="นาย"?"✓":"";
+  map.title_mrs=m.title==="นาง"?"✓":"";
+  map.title_miss=m.title==="นางสาว"?"✓":"";
+  return map;
+}
+
+function distributeMasterData(){
+  const map=buildMasterMap();let count=0;
+  S.docs.forEach(d=>d.fields.forEach(f=>{
+    if(f.dataKey&&Object.prototype.hasOwnProperty.call(map,f.dataKey)){
+      f.value=map[f.dataKey];count++;
+    }
+  }));
+  renderFields();
+  toast(count?`กระจายข้อมูลแล้ว (${count} ช่อง)`:"ยังไม่มีช่องที่ผูกข้อมูลหลักไว้");
+}
+
+const MASTER_FIELD_IDS=["title","first","last","age","date","house","moo","soi","road",
+  "sub","dist","prov","zip","occ","amount","repay"];
+const M_EL={title:"mTitle",first:"mFirst",last:"mLast",age:"mAge",date:"mDate",house:"mHouse",
+  moo:"mMoo",soi:"mSoi",road:"mRoad",sub:"mSub",dist:"mDist",prov:"mProv",zip:"mZip",
+  occ:"mOcc",amount:"mAmount",repay:"mRepay"};
+
+function syncMasterInputsFromState(){
+  MASTER_FIELD_IDS.forEach(k=>{const el=$("#"+M_EL[k]);if(el)el.value=S.master[k]||"";});
+  updateAmountPreview();
+}
+function updateAmountPreview(){
+  $("#mAmountText").textContent=S.master.amount?("ตัวอักษร: "+bahtText(S.master.amount)):"";
+}
+MASTER_FIELD_IDS.forEach(k=>{
+  const el=$("#"+M_EL[k]);if(!el)return;
+  el.addEventListener("input",()=>{S.master[k]=el.value;if(k==="amount")updateAmountPreview();});
+  el.addEventListener("change",()=>{S.master[k]=el.value;if(k==="amount")updateAmountPreview();});
+});
+
+$("#btnMaster").addEventListener("click",()=>{$("#masterOverlay").classList.add("show");});
+$("#mClose").addEventListener("click",()=>{$("#masterOverlay").classList.remove("show");});
+$("#mClear").addEventListener("click",()=>{
+  Object.keys(S.master).forEach(k=>S.master[k]=(k==="title"?"นาย":""));
+  syncMasterInputsFromState();$("#ocrRaw").style.display="none";$("#ocrStatus").textContent="";
+  toast("ล้างข้อมูลหลักแล้ว");
+});
+$("#mApply").addEventListener("click",()=>{distributeMasterData();$("#masterOverlay").classList.remove("show");});
+
+// ── OCR: อ่านบัตรประชาชนจากรูปภาพ (ทำงานฝั่ง client ทั้งหมด ไม่มีข้อมูลออกจากเครื่อง) ──
+$("#btnScanId").addEventListener("click",()=>$("#fileId").click());
+$("#fileId").addEventListener("change",async e=>{
+  const f=e.target.files[0];if(!f)return;
+  const st=$("#ocrStatus"),raw=$("#ocrRaw");
+  st.textContent="⏳ กำลังอ่านบัตร... (อาจใช้เวลา 10-30 วินาที)";raw.style.display="none";
+  try{
+    const{data}=await Tesseract.recognize(f,"tha+eng",{});
+    const text=data.text||"";
+    raw.textContent=text;raw.style.display="block";
+    applyOcrText(text);
+    st.textContent="✅ อ่านเสร็จแล้ว — กรุณาตรวจสอบข้อมูลด้านล่างก่อนกด \"กระจายข้อมูล\"";
+  }catch(err){console.error(err);st.textContent="⚠ อ่านบัตรไม่สำเร็จ: "+err.message;}
+  finally{e.target.value="";}
+});
+
+function applyOcrText(text){
+  const norm=text.replace(/\r/g,"");
+  // ── ชื่อ-นามสกุล (บรรทัดภาษาไทยที่ขึ้นต้นด้วย "ชื่อ") ──
+  let mName=norm.match(/ชื่อ(?:ตัวและชื่อสกุล|ตัว|สกุล)?\s*[:：]?\s*(นาย|นาง|นางสาว)?\s*([ก-๙]+)\s+([ก-๙]+)/);
+  if(mName){
+    if(mName[1])S.master.title=mName[1];
+    S.master.first=mName[2]||S.master.first;
+    S.master.last=mName[3]||S.master.last;
+  }
+  // ── วันเกิด -> คำนวณอายุโดยประมาณ ──
+  let mBirth=norm.match(/เกิด.*?(\d{1,2})\s*([ก-๙\.]{2,})\s*(\d{4})/);
+  if(mBirth){
+    const birthYearBE=parseInt(mBirth[3],10);
+    const monthIdx=THAI_MONTHS.findIndex(mo=>mo&&mBirth[2].startsWith(mo.slice(0,3)));
+    const nowBE=new Date().getFullYear()+543;
+    if(birthYearBE>2400){
+      let age=nowBE-birthYearBE;
+      S.master.age=String(Math.max(0,age));
+    }
+  }
+  // ── เลขบัตรประชาชน (ใช้ตรวจสอบว่าน่าจะเป็นบัตรจริง แต่ไม่ต้องกรอกลงฟอร์ม) ──
+  // (ไม่บันทึกเลขบัตรลงข้อมูลหลัก เพื่อความเป็นส่วนตัว — ใช้ชื่อ/ที่อยู่/อายุเท่านั้น)
+  // ── ที่อยู่ (ฝั่งหลังบัตร) ──
+  let mAddr=norm.match(/ที่อยู่\s*[:：]?\s*([^\n]+)/);
+  if(mAddr){
+    const line=mAddr[1];
+    const houseM=line.match(/(?:เลขที่|บ้านเลขที่)\s*([0-9\/]+)/);
+    const mooM=line.match(/หมู่(?:ที่)?\s*([0-9]+)/);
+    const soiM=line.match(/ซอย\s*([ก-๙0-9a-zA-Z\.]+)/);
+    const roadM=line.match(/ถนน\s*([ก-๙0-9a-zA-Z\.]+)/);
+    const subM=line.match(/(?:ตำบล|แขวง)\s*([ก-๙]+)/);
+    const distM=line.match(/(?:อำเภอ|เขต)\s*([ก-๙]+)/);
+    const provM=line.match(/จังหวัด\s*([ก-๙]+)/);
+    const zipM=line.match(/(\d{5})/);
+    if(houseM)S.master.house=houseM[1];
+    if(mooM)S.master.moo=mooM[1];
+    if(soiM)S.master.soi=soiM[1];
+    if(roadM)S.master.road=roadM[1];
+    if(subM)S.master.sub=subM[1];
+    if(distM)S.master.dist=distM[1];
+    if(provM)S.master.prov=provM[1];
+    if(zipM)S.master.zip=zipM[1];
+  }
+  syncMasterInputsFromState();
+}
 
 /*BUNDLE_STARTUP_BEGIN*/
 document.getElementById("btnStartLoad").addEventListener("click",()=>{
