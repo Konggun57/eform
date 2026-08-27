@@ -586,7 +586,7 @@ function buildMasterMap(){
   const rd=splitThaiDate(m.repay);
   map.repay_day=rd.day;map.repay_month=rd.monthName;map.repay_year=rd.yearBE;
   const amt=m.amount?String(m.amount):"";
-  map.amount=amt;map.amount_satang="";
+  map.amount=amt?formatThousands(amt):"";map.amount_satang="";
   map.amount_text=amt?bahtText(amt):"";
   map.title_mr=m.title==="นาย"?"✓":"";
   map.title_mrs=m.title==="นาง"?"✓":"";
